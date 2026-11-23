@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Campus Cleanliness Reporter | StudentLife Hack #42</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#ecfdf5',
+              100: '#d1fae5',
+              500: '#10b981',
+              600: '#059669',
+              700: '#047857',
+              800: '#065f46',
+              900: '#064e3b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-800 transition-colors duration-200 min-h-screen flex flex-col">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & Project Title -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-600 to-teal-400 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="font-bold text-lg text-slate-900 dark:text-white tracking-tight">EcoCampus</span>
+            <span class="text-xs px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-semibold border border-emerald-200 dark:border-emerald-800">Hackathon #42</span>
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">Campus Cleanliness Reporter & Recurrence Tracker</p>
+        </div>
+      </div>
+
+      <!-- Center Status / Live Indicator -->
+      <div class="hidden md:flex items-center space-x-4">
+        <div class="flex items-center space-x-2 px-3 py-1 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded-full border border-emerald-200 dark:border-emerald-800 text-xs font-medium">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="w-2 h-2 rounded-full bg-emerald-500 -ml-3"></span>
+          <span id="liveStatusText">System Operational</span>
+        </div>
+        <span class="text-xs text-slate-400 dark:text-slate-500 font-mono" id="currentClock">--:--:--</span>
+      </div>
+
+      <!-- Action Buttons & Theme Toggle -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <button id="quickReportBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-1.5 rounded-lg text-sm font-medium flex items-center space-x-1.5 shadow-sm transition">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span class="hidden sm:inline">Report Issue</span>
+        </button>
+
+        <!-- Multi-format Export Dropdown -->
+        <div class="relative group">
+          <button class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center space-x-1 transition">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span class="hidden sm:inline">Export</span>
+            <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+          </button>
+          <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+            <button onclick="exportMarkdownSummary()" class="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 flex items-center space-x-2">
+              <i data-lucide="file-text" class="w-4 h-4 text-emerald-600"></i>
+              <span>Executive Markdown (.md)</span>
+            </button>
+            <button onclick="exportCSVData()" class="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 flex items-center space-x-2">
+              <i data-lucide="table" class="w-4 h-4 text-blue-600"></i>
+              <span>Standard CSV (.csv)</span>
+            </button>
+            <button onclick="exportJSONData()" class="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 flex items-center space-x-2">
+              <i data-lucide="code" class="w-4 h-4 text-amber-600"></i>
+              <span>Full JSON Database (.json)</span>
+            </button>
+            <button onclick="exportAuditLog()" class="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-emerald-50 dark:hover:bg-slate-700 flex items-center space-x-2">
+              <i data-lucide="clipboard-list" class="w-4 h-4 text-purple-600"></i>
+              <span>Plain-text Audit Log (.txt)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- User Authentication Section -->
+        <div id="userAuthContainer" class="flex items-center">
+          <a href="login.html" id="signInLinkBtn" class="border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center space-x-1.5 transition">
+            <i data-lucide="log-in" class="w-4 h-4 text-emerald-600"></i>
+            <span class="hidden sm:inline">Sign In</span>
+          </a>
+          <div id="userProfileDropdown" class="hidden relative group">
+            <button class="flex items-center space-x-2 p-1 pl-2 pr-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-750 transition text-left">
+              <div id="userAvatar" class="w-7 h-7 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 text-white flex items-center justify-center text-xs font-bold shadow-sm">U</div>
+              <div class="hidden sm:block">
+                <div id="userNameDisplay" class="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight">User</div>
+                <div id="userRoleBadge" class="text-[10px] text-emerald-600 dark:text-emerald-400 font-medium leading-none">Role</div>
+              </div>
+              <i data-lucide="chevron-down" class="w-3.5 h-3.5 text-slate-400"></i>
+            </button>
+            <div class="absolute right-0 mt-1 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg py-1 hidden group-hover:block z-50">
+              <div class="px-3 py-1.5 border-b border-slate-100 dark:border-slate-700 text-[11px] text-slate-400">
+                <span id="userEmailDisplay" class="truncate block">user@campus.edu</span>
+              </div>
+              <a href="login.html" class="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center space-x-2">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-blue-500"></i>
+                <span>Switch Account / Role</span>
+              </a>
+              <button onclick="handleLogout()" class="w-full text-left px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 flex items-center space-x-2">
+                <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+                <span>Sign Out</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Dark Mode Switcher -->
+        <button id="themeToggleBtn" aria-label="Toggle Theme" class="p-2 rounded-lg text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white border border-slate-200 dark:border-slate-700 transition">
+          <i data-lucide="moon" id="themeIcon" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Sub-Navigation Navigation Tabs -->
+  <div class="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex space-x-2 sm:space-x-8 overflow-x-auto py-2 text-sm font-medium" id="mainTabNav">
+        <button data-tab="dashboard" class="tab-btn px-3 py-2 rounded-lg text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 font-semibold flex items-center space-x-2">
+          <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+          <span>Live Analytics</span>
+        </button>
+        <button data-tab="incidents" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="list-checks" class="w-4 h-4"></i>
+          <span>Incident Feed (<span id="totalReportsNavCount">0</span>)</span>
+        </button>
+        <button data-tab="recurring" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="repeat" class="w-4 h-4"></i>
+          <span>Recurring Hotspots</span>
+          <span id="recurringBadge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] bg-red-100 text-red-700 font-bold">0</span>
+        </button>
+        <button data-tab="report" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="file-plus-2" class="w-4 h-4"></i>
+          <span>Submit Report</span>
+        </button>
+        <button data-tab="datahub" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>Data Hub & Bulk Import</span>
+        </button>
+        <button data-tab="cli-guide" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="terminal" class="w-4 h-4"></i>
+          <span>Python CLI & Spec</span>
+        </button>
+        <a href="login.html" class="tab-btn px-3 py-2 rounded-lg text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center space-x-2">
+          <i data-lucide="user-check" class="w-4 h-4 text-emerald-600"></i>
+          <span id="navLoginText">Sign In / Role</span>
+        </a>
+      </nav>
+    </div>
+  </div>
+
+  <!-- Dynamic Threshold Warning Alert Banner -->
+  <div id="thresholdWarningBanner" class="hidden bg-gradient-to-r from-red-600 via-rose-600 to-amber-600 text-white px-4 py-2.5 shadow-md recurring-alert-box">
+    <div class="max-w-7xl mx-auto flex items-center justify-between text-xs sm:text-sm">
+      <div class="flex items-center space-x-2 font-medium">
+        <i data-lucide="alert-triangle" class="w-5 h-5 flex-shrink-0 animate-bounce"></i>
+        <span id="thresholdWarningMsg">Alert: Chronic cleanliness recurrences detected in cafeteria and library zones!</span>
+      </div>
+      <div class="flex items-center space-x-3">
+        <button onclick="switchTab('recurring')" class="underline hover:text-red-100 font-semibold cursor-pointer">View Hotspots &rarr;</button>
+        <button onclick="dismissWarningBanner()" class="text-white/80 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+
+    <!-- Key Metrics Ribbon (Always visible on main views) -->
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 mb-6">
+      
+      <!-- Metric 1: Total Reports -->
+      <div class="eco-card stat-card p-4 bg-white dark:bg-slate-800 rounded-xl">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-xs font-semibold uppercase tracking-wider">Total Reports</span>
+          <i data-lucide="clipboard-check" class="w-4 h-4 text-emerald-500"></i>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <span class="text-2xl font-extrabold text-slate-900 dark:text-white" id="statTotalReports">0</span>
+          <span class="text-xs text-emerald-600 dark:text-emerald-400 font-medium flex items-center">
+            <i data-lucide="database" class="w-3 h-3 mr-1"></i> persisted
+          </span>
+        </div>
+      </div>
+
+      <!-- Metric 2: Active Unresolved -->
+      <div class="eco-card stat-card p-4 bg-white dark:bg-slate-800 rounded-xl">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-xs font-semibold uppercase tracking-wider">Active Issues</span>
+          <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <span class="text-2xl font-extrabold text-amber-600 dark:text-amber-400" id="statActiveIssues">0</span>
+          <span class="text-xs text-slate-400" id="statResolutionRate">0% fixed</span>
+        </div>
+      </div>
+
+      <!-- Metric 3: Critical SLA Alerts -->
+      <div class="eco-card stat-card p-4 bg-white dark:bg-slate-800 rounded-xl">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-xs font-semibold uppercase tracking-wider">Critical SLA</span>
+          <i data-lucide="flame" class="w-4 h-4 text-red-500"></i>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <span class="text-2xl font-extrabold text-red-600 dark:text-red-400" id="statCriticalAlerts">0</span>
+          <span class="text-xs text-red-500 font-medium">Urgent attention</span>
+        </div>
+      </div>
+
+      <!-- Metric 4: Campus Cleanliness Score -->
+      <div class="eco-card stat-card p-4 bg-white dark:bg-slate-800 rounded-xl">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-xs font-semibold uppercase tracking-wider">Avg Cleanliness</span>
+          <i data-lucide="sparkles" class="w-4 h-4 text-teal-500"></i>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <div class="flex items-center space-x-1">
+            <span class="text-2xl font-extrabold text-teal-600 dark:text-teal-400" id="statAvgScore">0.0</span>
+            <span class="text-xs text-slate-400">/ 5.0</span>
+          </div>
+          <span class="text-xs px-1.5 py-0.5 rounded bg-teal-50 dark:bg-teal-950 text-teal-700 dark:text-teal-300 font-semibold" id="statScoreLabel">Fair</span>
+        </div>
+      </div>
+
+      <!-- Metric 5: Recurring Hotspots -->
+      <div class="eco-card stat-card p-4 bg-white dark:bg-slate-800 rounded-xl col-span-2 sm:col-span-1">
+        <div class="flex items-center justify-between text-slate-400">
+          <span class="text-xs font-semibold uppercase tracking-wider">Hotspots (&ge;2)</span>
+          <i data-lucide="map-pin" class="w-4 h-4 text-indigo-500"></i>
+        </div>
+        <div class="mt-2 flex items-baseline justify-between">
+          <span class="text-2xl font-extrabold text-indigo-600 dark:text-indigo-400" id="statHotspotsCount">0</span>
+          <span class="text-xs text-indigo-500 cursor-pointer hover:underline" onclick="switchTab('recurring')">Review Areas</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TAB 1: DASHBOARD & LIVE ANALYTICS -->
+    <section id="tab-dashboard" class="tab-content block space-y-6">
+      
+      <!-- Charts Row 1: Recurring Hotspots & Issue Category Distribution -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Chart 1: Recurring Areas by Incident Frequency -->
+        <div class="eco-card p-5 bg-white dark:bg-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="bar-chart-2" class="w-4 h-4 text-emerald-500"></i>
+                Recurring Problem Areas (Location Frequency)
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Locations with multiple logged complaints</p>
+            </div>
+            <span class="text-xs font-mono text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950 px-2 py-0.5 rounded">Top Zones</span>
+          </div>
+          <div class="h-64 relative">
+            <canvas id="chartRecurringLocations"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 2: Category Breakdown -->
+        <div class="eco-card p-5 bg-white dark:bg-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-teal-500"></i>
+                Incident Category Breakdown
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Distribution by type of cleanliness issue</p>
+            </div>
+            <span class="text-xs font-mono text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950 px-2 py-0.5 rounded">All Reports</span>
+          </div>
+          <div class="h-64 relative flex items-center justify-center">
+            <canvas id="chartCategories"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Charts Row 2: Severity Distribution & Cleanliness Score Distribution -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        <!-- Chart 3: Severity Breakdown -->
+        <div class="eco-card p-5 bg-white dark:bg-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Severity Distribution</h3>
+            <i data-lucide="alert-octagon" class="w-4 h-4 text-rose-500"></i>
+          </div>
+          <div class="h-48 relative">
+            <canvas id="chartSeverity"></canvas>
+          </div>
+        </div>
+
+        <!-- Chart 4: Cleanliness Score Rating Distribution -->
+        <div class="eco-card p-5 bg-white dark:bg-slate-800 rounded-xl">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Cleanliness Scores (1 to 5)</h3>
+            <i data-lucide="star" class="w-4 h-4 text-amber-500"></i>
+          </div>
+          <div class="h-48 relative">
+            <canvas id="chartScores"></canvas>
+          </div>
+        </div>
+
+        <!-- Priority Action Queue (Actionable Insights) -->
+        <div class="eco-card p-5 bg-white dark:bg-slate-800 rounded-xl flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500">Immediate Action Queue</h3>
+              <span class="px-2 py-0.5 rounded-full text-[10px] bg-red-100 text-red-700 font-bold">Priority</span>
+            </div>
+            <div class="space-y-3" id="immediateActionList">
+              <!-- Populated by JavaScript -->
+            </div>
+          </div>
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-700 mt-3 text-right">
+            <button onclick="switchTab('incidents')" class="text-xs text-emerald-600 dark:text-emerald-400 font-semibold hover:underline flex items-center justify-end gap-1">
+              <span>View full triage feed</span>
+              <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 2: INCIDENT FEED & TABLE -->
+    <section id="tab-incidents" class="tab-content hidden space-y-4">
+      
+      <!-- Filter Bar -->
+      <div class="eco-card p-4 bg-white dark:bg-slate-800 rounded-xl">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          
+          <!-- Search box -->
+          <div class="lg:col-span-2 relative">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+            <input type="text" id="searchInput" placeholder="Search by location, keyword, reporter..." 
+              class="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+          </div>
+
+          <!-- Zone / Building Filter -->
+          <div>
+            <select id="filterBuilding" class="w-full py-2 px-3 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">All Buildings</option>
+              <option value="Student Cafeteria">Student Cafeteria</option>
+              <option value="Central Library">Central Library</option>
+              <option value="Hostel Block B">Hostel Block B</option>
+              <option value="Hostel Block A">Hostel Block A</option>
+              <option value="Chemistry Block">Chemistry Block</option>
+              <option value="Gymnasium & Arena">Gymnasium & Arena</option>
+              <option value="Administrative Complex">Administrative Complex</option>
+              <option value="Computer Science Center">Computer Science Center</option>
+              <option value="Mechanical Workshop">Mechanical Workshop</option>
+              <option value="Civil Engineering Hall">Civil Engineering Hall</option>
+            </select>
+          </div>
+
+          <!-- Severity Filter -->
+          <div>
+            <select id="filterSeverity" class="w-full py-2 px-3 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">All Severities</option>
+              <option value="Critical">Critical</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+
+          <!-- Status Filter -->
+          <div>
+            <select id="filterStatus" class="w-full py-2 px-3 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+              <option value="">All Statuses</option>
+              <option value="Reported">Reported</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+
+        </div>
+
+        <!-- Filter tag bar and reset -->
+        <div class="mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/60 flex items-center justify-between text-xs text-slate-500">
+          <div class="flex items-center space-x-2">
+            <span>Showing <span id="filteredCountText" class="font-bold text-slate-700 dark:text-slate-200">0</span> matching reports</span>
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+            <button onclick="clearAllFilters()" class="text-emerald-600 dark:text-emerald-400 hover:underline">Reset filters</button>
+          </div>
+          <div class="flex items-center space-x-3">
+            <label class="flex items-center space-x-1.5 cursor-pointer">
+              <input type="checkbox" id="filterRecurringOnly" class="rounded text-emerald-600 focus:ring-emerald-500 h-3.5 w-3.5">
+              <span>Show Recurring Hotspots Only</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Data Table -->
+      <div class="eco-card bg-white dark:bg-slate-800 rounded-xl overflow-hidden shadow-sm">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse text-sm">
+            <thead>
+              <tr class="bg-slate-100/70 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <th class="py-3 px-4">ID</th>
+                <th class="py-3 px-4">Location / Zone</th>
+                <th class="py-3 px-4">Issue & Cleanliness</th>
+                <th class="py-3 px-4">Severity / SLA</th>
+                <th class="py-3 px-4">Status</th>
+                <th class="py-3 px-4">Reporter</th>
+                <th class="py-3 px-4 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTableBody" class="divide-y divide-slate-100 dark:divide-slate-700/60 text-slate-700 dark:text-slate-200">
+              <!-- Dynamically rendered -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Table Pagination & Footer -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-2">
+          <div>
+            Page <span id="currentPageNum" class="font-semibold text-slate-700 dark:text-slate-300">1</span> of <span id="totalPagesNum" class="font-semibold text-slate-700 dark:text-slate-300">1</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button id="prevPageBtn" onclick="changePage(-1)" class="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40">Previous</button>
+            <button id="nextPageBtn" onclick="changePage(1)" class="px-2.5 py-1 rounded border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 disabled:opacity-40">Next</button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 3: RECURRING HOTSPOT ANALYZER -->
+    <section id="tab-recurring" class="tab-content hidden space-y-6">
+      
+      <div class="bg-gradient-to-r from-emerald-800 to-teal-900 text-white p-6 rounded-2xl shadow-md">
+        <div class="max-w-3xl">
+          <div class="flex items-center space-x-2 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
+            <i data-lucide="repeat" class="w-4 h-4"></i>
+            <span>Core Computational Engine</span>
+          </div>
+          <h2 class="text-2xl font-extrabold tracking-tight">Recurring Cleanliness Hotspot Analyzer</h2>
+          <p class="mt-2 text-sm text-emerald-100 leading-relaxed">
+            Our algorithm detects chronic problem locations across campus by grouping incidents by building and specific spot, calculating recurrence intervals, highlighting repeat complaints (&ge; 2 reports), and generating automated custodial recommendations to prevent repeated sanitary failures.
+          </p>
+        </div>
+      </div>
+
+      <!-- Hotspots Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="recurringHotspotsContainer">
+        <!-- Dynamically rendered recurring cards -->
+      </div>
+
+    </section>
+
+    <!-- TAB 4: SUBMIT NEW REPORT (WITH STRICT DEFENSIVE INPUT VALIDATION) -->
+    <section id="tab-report" class="tab-content hidden space-y-6">
+      
+      <div class="max-w-3xl mx-auto">
+        <div class="eco-card p-6 sm:p-8 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+          
+          <div class="border-b border-slate-200 dark:border-slate-700 pb-4 mb-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <i data-lucide="file-plus" class="w-5 h-5 text-emerald-600"></i>
+                  Record New Cleanliness Report
+                </h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Real-time input validation & sanitization safeguard against erroneous inputs</p>
+              </div>
+              <button type="button" onclick="loadSamplePreset()" class="text-xs text-emerald-600 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-700 px-2.5 py-1 rounded-md hover:bg-emerald-50 dark:hover:bg-slate-700">
+                Load Preset Test
+              </button>
+            </div>
+          </div>
+
+          <form id="cleanlinessForm" onsubmit="handleFormSubmit(event)" novalidate class="space-y-5">
+            
+            <!-- Row 1: Zone & Building -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Campus Zone <span class="text-red-500">*</span>
+                </label>
+                <select id="formZone" required class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Select Zone</option>
+                  <option value="North Campus">North Campus</option>
+                  <option value="Central Campus">Central Campus</option>
+                  <option value="Science Quad">Science Quad</option>
+                  <option value="Engineering Quad">Engineering Quad</option>
+                  <option value="Hostel Zone">Hostel Zone</option>
+                  <option value="Sports & Recreation">Sports & Recreation</option>
+                  <option value="Admin Block">Admin Block</option>
+                </select>
+                <p id="errZone" class="text-xs text-red-500 hidden mt-1">Please select a valid campus zone.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Building Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="formBuilding" placeholder="e.g. Student Cafeteria, Central Library" required maxlength="60"
+                  class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                <p id="errBuilding" class="text-xs text-red-500 hidden mt-1">Building name is required (min 3 chars).</p>
+              </div>
+            </div>
+
+            <!-- Row 2: Specific Spot / Room -->
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                Specific Location / Spot <span class="text-red-500">*</span>
+              </label>
+              <input type="text" id="formSpot" placeholder="e.g. Ground Floor Dish Drop & Wash Area, Lab 204" required maxlength="80"
+                class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+              <p class="text-[11px] text-slate-400 mt-0.5">Tip: Be specific (room number, floor wing, fixture) so the recurrence detector can match accurately.</p>
+              <p id="errSpot" class="text-xs text-red-500 hidden mt-1">Specific spot/location is required (min 3 chars).</p>
+            </div>
+
+            <!-- Row 3: Category & Severity -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Issue Category <span class="text-red-500">*</span>
+                </label>
+                <select id="formCategory" required class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                  <option value="">Select Category</option>
+                  <option value="Overflowing Bins">Overflowing Bins</option>
+                  <option value="Liquid Spills">Liquid Spills</option>
+                  <option value="Restroom Sanitization">Restroom Sanitization</option>
+                  <option value="Food Waste">Food Waste</option>
+                  <option value="Litter/Debris">Litter/Debris</option>
+                  <option value="Hazardous/Chemical">Hazardous/Chemical</option>
+                  <option value="Plumbing/Leak">Plumbing/Leak</option>
+                  <option value="Pest Control">Pest Control</option>
+                  <option value="Broken Fixtures">Broken Fixtures</option>
+                </select>
+                <p id="errCategory" class="text-xs text-red-500 hidden mt-1">Please select an issue category.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Urgency / Severity <span class="text-red-500">*</span>
+                </label>
+                <select id="formSeverity" required class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                  <option value="Low">Low (SLA: 48h - routine litter)</option>
+                  <option value="Medium" selected>Medium (SLA: 12-24h - noticeable mess)</option>
+                  <option value="High">High (SLA: 4-8h - sanitary risk, foul odor)</option>
+                  <option value="Critical">Critical (SLA: 2-4h - hazard, biohazard, flooding)</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Row 4: Cleanliness Score (1 to 5) -->
+            <div>
+              <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                Current Cleanliness Rating: <span id="scoreDisplay" class="font-extrabold text-amber-500 text-sm">2 - Poor</span>
+              </label>
+              <div class="flex items-center space-x-3">
+                <input type="range" id="formScore" min="1" max="5" value="2" step="1" 
+                  oninput="updateScoreDisplay(this.value)"
+                  class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-emerald-600">
+                <div class="flex space-x-1 text-xs font-bold text-slate-500">
+                  <span class="px-1.5 py-0.5 rounded bg-red-100 text-red-700">1</span>
+                  <span class="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700">2</span>
+                  <span class="px-1.5 py-0.5 rounded bg-yellow-100 text-yellow-700">3</span>
+                  <span class="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700">4</span>
+                  <span class="px-1.5 py-0.5 rounded bg-green-100 text-green-700">5</span>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400 mt-1">1: Critical/Hazardous | 2: Poor | 3: Fair | 4: Good | 5: Spotless Clean</p>
+            </div>
+
+            <!-- Row 5: Detailed Description -->
+            <div>
+              <div class="flex justify-between items-center mb-1">
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300">
+                  Incident Description <span class="text-red-500">*</span>
+                </label>
+                <span class="text-[11px] text-slate-400"><span id="descCharCount">0</span>/300 chars</span>
+              </div>
+              <textarea id="formDescription" rows="3" required maxlength="300" placeholder="Provide accurate details regarding what needs attention..."
+                oninput="document.getElementById('descCharCount').innerText = this.value.length"
+                class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500"></textarea>
+              <p id="errDescription" class="text-xs text-red-500 hidden mt-1">Description must be between 10 and 300 characters.</p>
+            </div>
+
+            <!-- Row 6: Reporter Information -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 border-t border-slate-100 dark:border-slate-700 pt-4">
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Reporter Name <span class="text-red-500">*</span>
+                </label>
+                <input type="text" id="formReporterName" placeholder="Full Name" required maxlength="50"
+                  class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                <p id="errReporterName" class="text-xs text-red-500 hidden mt-1">Valid reporter name is required.</p>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">Role</label>
+                <select id="formReporterRole" class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                  <option value="Student">Student</option>
+                  <option value="Faculty">Faculty</option>
+                  <option value="Staff">Staff</option>
+                  <option value="Lab Assistant">Lab Assistant</option>
+                  <option value="Visitor">Visitor</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-xs font-bold uppercase text-slate-600 dark:text-slate-300 mb-1">
+                  Campus Email <span class="text-red-500">*</span>
+                </label>
+                <input type="email" id="formReporterEmail" placeholder="id@campus.edu" required
+                  class="w-full py-2 px-3 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500">
+                <p id="errReporterEmail" class="text-xs text-red-500 hidden mt-1">Valid email format required.</p>
+              </div>
+            </div>
+
+            <!-- Submit Button with defensive feedback -->
+            <div class="pt-4 flex items-center justify-end space-x-3">
+              <button type="reset" class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">Clear</button>
+              <button type="submit" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-lg text-sm font-semibold shadow-md flex items-center space-x-2 transition">
+                <i data-lucide="send" class="w-4 h-4"></i>
+                <span>Submit & Validate Report</span>
+              </button>
+            </div>
+
+          </form>
+
+        </div>
+      </div>
+
+    </section>
+
+    <!-- TAB 5: DATA HUB & BULK IMPORT -->
+    <section id="tab-datahub" class="tab-content hidden space-y-6">
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Multi-format Export Suite -->
+        <div class="eco-card p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+          <div class="flex items-center space-x-3 mb-4">
+            <div class="p-2.5 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600">
+              <i data-lucide="share-2" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Multi-Format Summary Exports</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Download formatted deliverables for external audit and faculty review</p>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition">
+              <div class="flex items-center space-x-3">
+                <i data-lucide="file-text" class="w-5 h-5 text-emerald-600"></i>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Executive Markdown Report (.md)</h4>
+                  <p class="text-[11px] text-slate-500">Standardized summary, KPIs, recurring list & SLA analysis</p>
+                </div>
+              </div>
+              <button onclick="exportMarkdownSummary()" class="px-3 py-1.5 bg-emerald-600 text-white text-xs rounded-md font-medium hover:bg-emerald-700">Download</button>
+            </div>
+
+            <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition">
+              <div class="flex items-center space-x-3">
+                <i data-lucide="table" class="w-5 h-5 text-blue-600"></i>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Standard CSV Dataset (.csv)</h4>
+                  <p class="text-[11px] text-slate-500">Structured tabular rows ready for Excel, Google Sheets, or Pandas</p>
+                </div>
+              </div>
+              <button onclick="exportCSVData()" class="px-3 py-1.5 bg-blue-600 text-white text-xs rounded-md font-medium hover:bg-blue-700">Download</button>
+            </div>
+
+            <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition">
+              <div class="flex items-center space-x-3">
+                <i data-lucide="code" class="w-5 h-5 text-amber-600"></i>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">JSON Database Backup (.json)</h4>
+                  <p class="text-[11px] text-slate-500">Complete normalized raw state with full audit timestamps</p>
+                </div>
+              </div>
+              <button onclick="exportJSONData()" class="px-3 py-1.5 bg-amber-600 text-white text-xs rounded-md font-medium hover:bg-amber-700">Download</button>
+            </div>
+
+            <div class="p-3.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-750 transition">
+              <div class="flex items-center space-x-3">
+                <i data-lucide="clipboard-list" class="w-5 h-5 text-purple-600"></i>
+                <div>
+                  <h4 class="text-xs font-bold text-slate-800 dark:text-slate-200">Audit Log File (.txt)</h4>
+                  <p class="text-[11px] text-slate-500">Fixed-width formatted terminal-style chronological action ledger</p>
+                </div>
+              </div>
+              <button onclick="exportAuditLog()" class="px-3 py-1.5 bg-purple-600 text-white text-xs rounded-md font-medium hover:bg-purple-700">Download</button>
+            </div>
+          </div>
+
+          <div class="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <span class="text-xs text-slate-500">Need to restore original 35 sample records?</span>
+            <button onclick="resetToDefaultData()" class="text-xs text-red-600 dark:text-red-400 hover:underline font-semibold">Restore Seed Dataset</button>
+          </div>
+        </div>
+
+        <!-- Bulk Dataset Import Module -->
+        <div class="eco-card p-6 bg-white dark:bg-slate-800 rounded-xl shadow-sm">
+          <div class="flex items-center space-x-3 mb-4">
+            <div class="p-2.5 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600">
+              <i data-lucide="upload-cloud" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Bulk Dataset Import (CSV/JSON)</h3>
+              <p class="text-xs text-slate-500 dark:text-slate-400">Ingest legacy datasets with row-by-row validation & error logging</p>
+            </div>
+          </div>
+
+          <div class="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-6 text-center hover:border-emerald-500 transition cursor-pointer" onclick="document.getElementById('bulkFileInput').click()">
+            <input type="file" id="bulkFileInput" accept=".csv,.json" class="hidden" onchange="handleBulkFileUpload(event)">
+            <i data-lucide="file-up" class="w-8 h-8 mx-auto text-slate-400 mb-2"></i>
+            <p class="text-xs font-semibold text-slate-700 dark:text-slate-200">Click to upload or drag CSV / JSON file</p>
+            <p class="text-[11px] text-slate-400 mt-1">Enforces schema integrity, type sanitization, and auto ID allocation</p>
+          </div>
+
+          <!-- Import Log & Status Preview -->
+          <div id="importLogContainer" class="mt-4 p-3 rounded-lg bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-mono hidden">
+            <div class="flex items-center justify-between mb-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+              <span class="font-bold text-slate-700 dark:text-slate-300">Import Validation Log:</span>
+              <span id="importStats" class="text-[11px] text-emerald-600"></span>
+            </div>
+            <div id="importLogOutput" class="max-h-36 overflow-y-auto space-y-1 text-slate-600 dark:text-slate-400"></div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- TAB 6: PYTHON CLI & ARCHITECTURE GUIDE -->
+    <section id="tab-cli-guide" class="tab-content hidden space-y-6">
+      
+      <div class="eco-card p-6 bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700">
+        
+        <div class="flex items-center space-x-3 mb-6">
+          <div class="p-3 rounded-xl bg-slate-900 text-emerald-400 font-mono">
+            <i data-lucide="terminal" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">Python Terminal Interface & Mentor Spec</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">Compliant with Hackathon Project #42 Core Requirements</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          
+          <!-- Instructions -->
+          <div class="space-y-4 text-sm text-slate-600 dark:text-slate-300">
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+              <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+                <i data-lucide="play" class="w-4 h-4 text-emerald-600"></i>
+                How to Run the Terminal CLI:
+              </h3>
+              <p class="text-xs text-slate-500 mb-2">Open your command prompt or terminal in this folder and run:</p>
+              <div class="bg-slate-950 text-emerald-400 p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                python cli.py
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Features interactive menus, ANSI formatting, defensive input loops, and Matplotlib chart exports.</p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+              <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+                <i data-lucide="server" class="w-4 h-4 text-blue-600"></i>
+                How to Run the Python Web Server:
+              </h3>
+              <p class="text-xs text-slate-500 mb-2">To run the local web server with full REST APIs:</p>
+              <div class="bg-slate-950 text-emerald-400 p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                python server.py
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Starts an HTTP service on <span class="font-mono text-slate-800 dark:text-slate-200">http://localhost:8000</span> serving the web UI and live endpoints.</p>
+            </div>
+
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+              <h3 class="font-bold text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-2">
+                <i data-lucide="image" class="w-4 h-4 text-purple-600"></i>
+                Generate Matplotlib Visual Charts:
+              </h3>
+              <div class="bg-slate-950 text-emerald-400 p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                python generate_charts.py
+              </div>
+              <p class="text-xs text-slate-500 mt-2">Exports high-resolution multi-panel plots directly to <span class="font-mono text-slate-800 dark:text-slate-200">campus_analytics_charts.png</span>.</p>
+            </div>
+          </div>
+
+          <!-- Terminal Mock Display -->
+          <div class="bg-slate-950 text-slate-100 p-5 rounded-xl font-mono text-xs leading-relaxed border border-slate-800 shadow-inner flex flex-col justify-between">
+            <div>
+              <div class="flex items-center space-x-2 text-slate-500 mb-3 pb-2 border-b border-slate-800">
+                <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-yellow-500 inline-block"></span>
+                <span class="w-3 h-3 rounded-full bg-green-500 inline-block"></span>
+                <span class="ml-2 text-slate-400">Campus Cleanliness Reporter - Interactive TUI</span>
+              </div>
+              <pre class="text-emerald-400 font-bold mb-2">
+======================================================
+  CAMPUS CLEANLINESS REPORTER | StudentLife Hack #42
+  Domain: Environment & Sustainability
+======================================================</pre>
+              <div class="text-slate-300 space-y-1">
+                <div>[1] Record New Cleanliness Report (Validated)</div>
+                <div>[2] Query & Search Reports by Location / Severity</div>
+                <div>[3] Summarize Recurring Problem Areas (Hotspots)</div>
+                <div>[4] Generate Executive Performance Summary</div>
+                <div>[5] Export Visual Charts (Matplotlib .PNG)</div>
+                <div>[6] Multi-Format Data Export (Markdown, CSV, JSON)</div>
+                <div>[7] Bulk Ingest Legacy Dataset</div>
+                <div>[0] Exit Application</div>
+              </div>
+              <div class="mt-4 text-yellow-400">
+                &gt;&gt; Enter option [0-7]: 3
+              </div>
+              <div class="mt-2 text-slate-400 text-[11px]">
+                [ALERT] Student Cafeteria (Dish Drop Area): 4 recurring reports!
+                [ALERT] Central Library (2nd Floor): 3 recurring reports!
+              </div>
+            </div>
+            <div class="pt-4 text-slate-600 text-[10px] border-t border-slate-900 mt-4">
+              Defensive Try-Except Safe &bull; Auto-persisted to JSON/CSV
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Detailed Incident Inspection Modal -->
+  <div id="incidentModal" class="fixed inset-0 z-50 hidden modal-overlay flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+      
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-700">
+        <div class="flex items-center space-x-2">
+          <span id="modalReportId" class="font-mono text-sm font-bold px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-800 dark:text-slate-200">CR-0000</span>
+          <span id="modalSeverityBadge"></span>
+        </div>
+        <button onclick="closeIncidentModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-sm">
+        <div class="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl">
+          <div>
+            <span class="text-[11px] uppercase font-bold text-slate-400 block">Zone & Building</span>
+            <span id="modalLocation" class="font-semibold text-slate-800 dark:text-slate-200"></span>
+          </div>
+          <div>
+            <span class="text-[11px] uppercase font-bold text-slate-400 block">Specific Spot</span>
+            <span id="modalSpot" class="font-semibold text-slate-800 dark:text-slate-200"></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-2">
+          <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Category</span>
+            <span id="modalCategory" class="font-bold text-xs text-slate-700 dark:text-slate-300"></span>
+          </div>
+          <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">Cleanliness Score</span>
+            <span id="modalScore" class="font-bold text-xs"></span>
+          </div>
+          <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-[10px] text-slate-400 uppercase font-bold block">SLA Target</span>
+            <span id="modalSla" class="font-bold text-xs text-slate-700 dark:text-slate-300"></span>
+          </div>
+        </div>
+
+        <div>
+          <span class="text-[11px] uppercase font-bold text-slate-400 block mb-1">Issue Description</span>
+          <p id="modalDescription" class="p-3 rounded-lg bg-slate-50 dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs leading-relaxed border border-slate-100 dark:border-slate-700"></p>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 text-xs text-slate-500">
+          <div>
+            <span class="font-semibold text-slate-600 dark:text-slate-300">Reporter:</span>
+            <span id="modalReporter"></span>
+          </div>
+          <div>
+            <span class="font-semibold text-slate-600 dark:text-slate-300">Timestamp:</span>
+            <span id="modalTimestamp"></span>
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-slate-100 dark:border-slate-700">
+          <label class="block text-xs font-bold uppercase text-slate-500 mb-1">Custodial Notes & Actions</label>
+          <textarea id="modalNotes" rows="2" class="w-full text-xs p-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100"></textarea>
+        </div>
+
+        <div class="flex items-center justify-between pt-2">
+          <div class="flex items-center space-x-2">
+            <span class="text-xs text-slate-500 font-medium">Update Status:</span>
+            <select id="modalStatusSelect" class="text-xs py-1 px-2 rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100">
+              <option value="Reported">Reported</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Resolved">Resolved</option>
+            </select>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button onclick="saveModalChanges()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold">Save Changes</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 space-y-2 pointer-events-none"></div>
+
+  <!-- Footer -->
+  <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-4 text-center text-xs text-slate-500 dark:text-slate-400 no-print">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div class="flex items-center space-x-2">
+        <span class="font-bold text-emerald-600 dark:text-emerald-400">EcoCampus Tracker</span>
+        <span>&bull;</span>
+        <span>Project #42: Campus Cleanliness Reporter</span>
+      </div>
+      <div>
+        <span>Environment &amp; Sustainability Domain &bull; Built with HTML5, CSS3, JavaScript, Python &amp; Matplotlib</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
